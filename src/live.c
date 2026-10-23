@@ -59,7 +59,7 @@ static int pick_window(const workload_t *w, int max_calls) {
     return bj;
 }
 
-typedef struct { double gpu, dram, ssd, miss, mean, p50, p95, io; long recompute; int n; } summary_t;
+typedef struct { double gpu, dram, ssd, miss, mean, p50, p95, io, restore, prefill, pf_tok; long recompute; int n; } summary_t;
 
 static int cmp_d(const void *a, const void *b) {
     double d = *(const double *)a - *(const double *)b;
@@ -111,12 +111,14 @@ static summary_t replay(struct llama_model *model, const workload_t *w, int ev0,
         ttft[r.n++] = x.ttft_s;
         r.mean += x.ttft_s;
         r.recompute += x.recompute_tok;
+        r.restore += x.restore_s; r.prefill += x.prefill_s; r.pf_tok += x.new_tok;
         if (x.where == T_GPU) r.gpu++;
         else if (x.where == T_DRAM) r.dram++;
         else if (x.where == T_SSD) r.ssd++;
         else r.miss++;
     }
     qsort(ttft, r.n, sizeof(double), cmp_d);
+    r.pf_tok /= r.prefill; r.restore /= r.n; r.prefill /= r.n;
     r.mean /= r.n; r.p50 = ttft[r.n / 2]; r.p95 = ttft[(int)(0.95 * r.n)];
     r.gpu /= r.n; r.dram /= r.n; r.ssd /= r.n; r.miss /= r.n;
     r.io = e->io_s;
@@ -170,15 +172,16 @@ int main(int argc, char **argv) {
     printf("\n== Part 2: replay of your real trace (%d users, %d calls, tokens / %d) ==\n", users, n_ev, scale);
     printf("%d sessions, private KV total %ld tokens; GPU tier %ld tokens, DRAM tier %ld tokens, SSD unlimited\n",
            n_sess, peak, gpu, dram);
-    printf("%-22s %8s %7s %7s %7s %10s %9s %8s %8s %9s\n", "policy", "GPU-hit", "DRAM", "SSD", "miss",
-           "recompute", "meanTTFT", "p50", "p95", "bg I/O");
+    printf("%-22s %8s %7s %7s %7s %10s %9s %8s %8s %9s %8s %8s %9s\n", "policy", "GPU-hit", "DRAM", "SSD", "miss",
+           "recompute", "meanTTFT", "p50", "p95", "bg I/O", "restore", "prefill", "pf tok/s");
     struct { int pol, dedup; const char *name; } runs[] = {
-        {POL_LRU, 0, "LRU"}, {POL_AGENT, 1, "signal-aware+shared"}};
-    for (int r = 0; r < 2; r++) {
+        {POL_LRU, 0, "LRU"}, {POL_LRU, 1, "LRU+shared"}, {POL_AGENT, 0, "signal-aware"},
+        {POL_AGENT, 1, "signal-aware+shared"}};
+    for (int r = 0; r < 4; r++) {
         summary_t x = replay(model, &w, ev0, n_ev, runs[r].pol, runs[r].dedup, scale, gpu, dram, n_ctx);
-        printf("%-22s %7.1f%% %6.1f%% %6.1f%% %6.1f%% %10ld %8.0fms %6.0fms %6.0fms %8.1fs\n", runs[r].name,
+        printf("%-22s %7.1f%% %6.1f%% %6.1f%% %6.1f%% %10ld %8.0fms %6.0fms %6.0fms %8.1fs %6.0fms %6.0fms %9.0f\n", runs[r].name,
                100 * x.gpu, 100 * x.dram, 100 * x.ssd, 100 * x.miss, x.recompute, 1000 * x.mean,
-               1000 * x.p50, 1000 * x.p95, x.io);
+               1000 * x.p50, 1000 * x.p95, x.io, 1000 * x.restore, 1000 * x.prefill, x.pf_tok);
     }
     llama_model_free(model);
     llama_backend_free();

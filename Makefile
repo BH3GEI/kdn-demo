@@ -2,7 +2,7 @@ LLAMA   := third_party/llama.cpp
 CFLAGS  := -O2 -Wall -Wno-unused-result -I$(LLAMA)/include -I$(LLAMA)/ggml/include
 LDFLAGS := -L$(LLAMA)/build/bin -lllama -lggml -lggml-base -Wl,-rpath,@executable_path/../$(LLAMA)/build/bin -lm
 
-all: bin/sim bin/live
+all: bin/sim bin/live bin/prefill_bench
 
 bin/sim: src/sim.c src/common.h
 	@mkdir -p bin
@@ -11,6 +11,10 @@ bin/sim: src/sim.c src/common.h
 bin/live: src/live.c src/kvengine.c src/kvengine.h src/common.h $(LLAMA)/build/bin/libllama.dylib
 	@mkdir -p bin
 	$(CC) $(CFLAGS) -o $@ src/live.c src/kvengine.c $(LDFLAGS)
+
+bin/prefill_bench: src/prefill_bench.c src/common.h $(LLAMA)/build/bin/libllama.dylib
+	@mkdir -p bin
+	$(CC) $(CFLAGS) -Wno-unused-function -o $@ src/prefill_bench.c $(LDFLAGS)
 
 $(LLAMA)/build/bin/libllama.dylib:
 	git clone --depth 1 https://github.com/ggml-org/llama.cpp $(LLAMA)

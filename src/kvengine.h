@@ -46,7 +46,7 @@ typedef struct {
 
 typedef struct {
     int where;          /* 请求到来时 KV 在哪一层；-2 表示新会话 */
-    double restore_s, ttft_s;
+    double restore_s, ttft_s, prefill_s; /* prefill_s：只算新 token 的 prefill */
     int recompute_tok, new_tok;
 } kresult_t;
 

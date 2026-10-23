@@ -219,7 +219,7 @@ double ke_restore(kengine_t *e, ksess_t *s) {
 /* ---------- 对外接口 ---------- */
 kresult_t ke_request(kengine_t *e, int sid, int prefix, const llama_token *toks, int n, double now) {
     ksess_t *s = ke_get(e, sid, prefix);
-    kresult_t r = {s->tier, 0, 0, 0, n};
+    kresult_t r = {s->tier, 0, 0, 0, 0, n};
     if (s->tier == T_NONE && s->nhist == 0) r.where = -2;
     double t0 = ke_now();
     if (s->tier != T_NONE) e->used[s->tier] -= footprint(e, s);
@@ -231,7 +231,9 @@ kresult_t ke_request(kengine_t *e, int sid, int prefix, const llama_token *toks,
         ke_prefill(e, s->slot, e->plen[prefix], s->hist, s->nhist);
         r.recompute_tok = r.where == -2 ? 0 : s->nhist;
     }
+    double tp = ke_now();
     ke_prefill(e, s->slot, e->plen[prefix] + s->nhist, toks, n);
+    r.prefill_s = ke_now() - tp;
     r.ttft_s = ke_now() - t0;
     if (s->nhist + n > s->caphist) {
         while (s->nhist + n > s->caphist) s->caphist = s->caphist ? s->caphist * 2 : 1024;
