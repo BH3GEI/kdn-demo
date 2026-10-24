@@ -1,0 +1,15 @@
+[package]
+name = "kdn-agent"
+version = "0.1.0"
+edition = "2021"
+description = "本地编码 Agent：仓库和工具留在本地，只把增量发给有状态会话服务"
+
+[dependencies]
+anyhow = "1"
+clap = { version = "4", features = ["derive"] }
+ignore = "0.4"
+regex = "1"
+reqwest = { version = "0.12", default-features = false, features = ["blocking", "json"] }
+rustyline = "15"
+serde = { version = "1", features = ["derive"] }
+serde_json = { version = "1", features = ["preserve_order"] }

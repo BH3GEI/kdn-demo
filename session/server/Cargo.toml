@@ -1,0 +1,21 @@
+[package]
+name = "kdn-server"
+version = "0.1.0"
+edition = "2021"
+description = "有状态会话推理服务：会话在服务端持有 KV，按 Agent 等待提示在 GPU/DRAM/SSD 之间放置"
+
+[dependencies]
+anyhow = "1"
+axum = "0.8"
+clap = { version = "4", features = ["derive"] }
+libc = "0.2"
+minijinja = { version = "2", features = ["loop_controls", "preserve_order"] }
+minijinja-contrib = { version = "2", features = ["pycompat"] }
+regex = "1"
+serde = { version = "1", features = ["derive"] }
+serde_json = { version = "1", features = ["preserve_order"] }
+tokio = { version = "1", features = ["full"] }
+tokio-stream = "0.1"
+
+[build-dependencies]
+cc = "1"
